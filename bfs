@@ -1,62 +1,91 @@
-from collections import deque
-from concurrent.futures import ThreadPoolExecutor
-import threading
+#include<iostream>
+#include<vector>
+#include<queue>
+#include<omp.h>
+using namespace std;
 
-class Graph:
-    def __init__(self, V):
-        self.V = V
-        self.adj = [[] for _ in range(V)]
+class Graph{
+    int V;
+    vector<vector<int>> adj;
 
-    # Add edge in undirected graph
-    def add_edge(self, u, v):
-        self.adj[u].append(v)
-        self.adj[v].append(u)
+public:
+    Graph(int V){
+        this->V = V;
+        adj.resize(V);
+    }
 
-    # Parallel BFS Traversal
-    def parallel_bfs(self, start):
-        visited = [False] * self.V
-        q = deque()
+    void addEdge(int u,int v){
+        adj[u].push_back(v);
+        adj[v].push_back(u);
+    }
 
-        visited[start] = True
-        q.append(start)
+    void parallelBFS(int start){
 
-        lock = threading.Lock()
+        vector<bool> visited(V,false);
+        queue<int> q;
 
-        print("Parallel BFS Traversal:", end=" ")
+        visited[start] = true;
+        q.push(start);
 
-        while q:
-            node = q.popleft()
-            print(node, end=" ")
+        cout<<"Parallel BFS Traversal: ";
 
-            # Function for processing neighbors
-            def process_neighbor(neighbor):
-                nonlocal visited, q
+        while(!q.empty()){
 
-                if not visited[neighbor]:
-                    with lock:
-                        if not visited[neighbor]:
-                            visited[neighbor] = True
-                            q.append(neighbor)
+            int node = q.front();
+            q.pop();
 
-            # Parallel execution using threads
-            with ThreadPoolExecutor() as executor:
-                executor.map(process_neighbor, self.adj[node])
+            cout<<node<<" ";
 
-        print()
+            #pragma omp parallel for
+            for(int i=0;i<adj[node].size();i++){
 
+                int neighbor = adj[node][i];
 
-# Main Program
-V = int(input("Enter number of vertices: "))
+                if(!visited[neighbor]){
 
-g = Graph(V)
+                    #pragma omp critical
+                    {
+                        if(!visited[neighbor]){
+                            visited[neighbor] = true;
+                            q.push(neighbor);
+                        }
+                    }
+                }
+            }
+        }
 
-E = int(input("Enter number of edges: "))
+        cout<<endl;
+    }
+};
 
-print("Enter edges (u v):")
-for _ in range(E):
-    u, v = map(int, input().split())
-    g.add_edge(u, v)
+int main(){
 
-start = int(input("Enter starting vertex: "))
+    int V,E;
 
-g.parallel_bfs(start)
+    cout<<"Enter number of vertices: ";
+    cin>>V;
+
+    Graph g(V);
+
+    cout<<"Enter number of edges: ";
+    cin>>E;
+
+    cout<<"Enter edges (u v):\n";
+
+    for(int i=0;i<E;i++){
+
+        int u,v;
+        cin>>u>>v;
+
+        g.addEdge(u,v);
+    }
+
+    int start;
+
+    cout<<"Enter starting vertex: ";
+    cin>>start;
+
+    g.parallelBFS(start);
+
+    return 0;
+}
