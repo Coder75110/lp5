@@ -1,69 +1,81 @@
-from concurrent.futures import ThreadPoolExecutor
-import threading
+#include<iostream>
+#include<vector>
+#include<omp.h>
+using namespace std;
 
-class Graph:
-    def __init__(self, V):
-        self.V = V
-        self.adj = [[] for _ in range(V)]
+class Graph{
+    int V;
+    vector<vector<int>> adj;
 
-    # Add edge
-    def add_edge(self, u, v):
-        self.adj[u].append(v)
-        self.adj[v].append(u)
+public:
+    Graph(int V){
+        this->V = V;
+        adj.resize(V);
+    }
 
-    # DFS Utility
-    def dfs_util(self, node, visited, lock):
+    void addEdge(int u,int v){
+        adj[u].push_back(v);
+        adj[v].push_back(u);
+    }
 
-        with lock:
-            if visited[node]:
-                return
+    void DFSUtil(int node, vector<bool> &visited){
 
-            visited[node] = True
-            print(node, end=" ")
+        visited[node] = true;
 
-        # Process neighbors sequentially
-        for neighbor in self.adj[node]:
+        #pragma omp critical
+        cout<<node<<" ";
 
-            if not visited[neighbor]:
+        #pragma omp parallel for
+        for(int i=0;i<adj[node].size();i++){
 
-                # Create thread for recursive DFS
-                with ThreadPoolExecutor(max_workers=1) as executor:
-                    future = executor.submit(
-                        self.dfs_util,
-                        neighbor,
-                        visited,
-                        lock
-                    )
+            int neighbor = adj[node][i];
 
-                    future.result()
+            if(!visited[neighbor]){
+                DFSUtil(neighbor, visited);
+            }
+        }
+    }
 
-    # Parallel DFS
-    def parallel_dfs(self, start):
+    void parallelDFS(int start){
 
-        visited = [False] * self.V
+        vector<bool> visited(V,false);
 
-        lock = threading.Lock()
+        cout<<"Parallel DFS Traversal: ";
 
-        print("Parallel DFS Traversal:", end=" ")
+        DFSUtil(start, visited);
 
-        self.dfs_util(start, visited, lock)
+        cout<<endl;
+    }
+};
 
-        print()
+int main(){
 
+    int V,E;
 
-# Main Program
-V = int(input("Enter number of vertices: "))
+    cout<<"Enter number of vertices: ";
+    cin>>V;
 
-g = Graph(V)
+    Graph g(V);
 
-E = int(input("Enter number of edges: "))
+    cout<<"Enter number of edges: ";
+    cin>>E;
 
-print("Enter edges (u v):")
+    cout<<"Enter edges (u v):\n";
 
-for _ in range(E):
-    u, v = map(int, input().split())
-    g.add_edge(u, v)
+    for(int i=0;i<E;i++){
 
-start = int(input("Enter starting vertex: "))
+        int u,v;
+        cin>>u>>v;
 
-g.parallel_dfs(start)
+        g.addEdge(u,v);
+    }
+
+    int start;
+
+    cout<<"Enter starting vertex: ";
+    cin>>start;
+
+    g.parallelDFS(start);
+
+    return 0;
+}
