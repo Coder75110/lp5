@@ -1,0 +1,136 @@
+import time
+from concurrent.futures import ThreadPoolExecutor
+
+class MergeSort:
+
+    # Merge Function
+    def merge(self, arr, l, m, r):
+
+        # Sizes of two subarrays
+        n1 = m - l + 1
+        n2 = r - m
+
+        # Temporary arrays
+        L = [0] * n1
+        R = [0] * n2
+
+        # Copy data to temporary arrays
+        for i in range(n1):
+            L[i] = arr[l + i]
+
+        for j in range(n2):
+            R[j] = arr[m + 1 + j]
+
+        i = 0
+        j = 0
+        k = l
+
+        # Merge temporary arrays
+        while i < n1 and j < n2:
+
+            if L[i] <= R[j]:
+                arr[k] = L[i]
+                i += 1
+
+            else:
+                arr[k] = R[j]
+                j += 1
+
+            k += 1
+
+        # Copy remaining elements of L
+        while i < n1:
+            arr[k] = L[i]
+            i += 1
+            k += 1
+
+        # Copy remaining elements of R
+        while j < n2:
+            arr[k] = R[j]
+            j += 1
+            k += 1
+
+    # Sequential Merge Sort
+    def sequential_merge_sort(self, arr, l, r):
+
+        if l < r:
+
+            m = (l + r) // 2
+
+            self.sequential_merge_sort(arr, l, m)
+
+            self.sequential_merge_sort(arr, m + 1, r)
+
+            self.merge(arr, l, m, r)
+
+    # Parallel Merge Sort
+    def parallel_merge_sort(self, arr, l, r):
+
+        if l < r:
+            m = (l + r) // 2
+            # Parallel execution
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                future1 = executor.submit(
+                    self.parallel_merge_sort,
+                    arr,
+                    l,
+                    m
+                )
+
+                future2 = executor.submit(
+                    self.parallel_merge_sort,
+                    arr,
+                    m + 1,
+                    r
+                )
+
+                future1.result()
+                future2.result()
+
+            self.merge(arr, l, m, r)
+
+    # Print Array
+    def print_array(self, arr):
+
+        for i in arr:
+            print(i, end=" ")
+
+        print()
+
+
+# Main Program
+n = int(input("Enter number of elements: "))
+
+arr = list(map(int, input("Enter elements:\n").split()))
+
+# Copy array for parallel sort
+arr2 = arr.copy()
+
+# Create object
+obj = MergeSort()
+
+# Sequential Merge Sort
+start = time.time()
+
+obj.sequential_merge_sort(arr, 0, n - 1)
+
+end = time.time()
+
+print("\nSequential Sorted Array:")
+
+obj.print_array(arr)
+
+print(f"Sequential Time: {end - start:.10f} seconds")
+
+# Parallel Merge Sort
+start = time.time()
+
+obj.parallel_merge_sort(arr2, 0, n - 1)
+
+end = time.time()
+
+print("\nParallel Sorted Array:")
+
+obj.print_array(arr2)
+
+print(f"Parallel Time: {end - start:.10f} seconds")
