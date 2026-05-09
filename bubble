@@ -1,87 +1,123 @@
-import time
-from concurrent.futures import ThreadPoolExecutor
-class BubbleSort:
+#include<iostream>
+#include<omp.h>
+#include<iomanip>
+using namespace std;
 
-    # Sequential Bubble Sort
-    def sequential_bubble_sort(self, arr):
+class BubbleSort{
 
-        n = len(arr)
+public:
 
-        for i in range(n - 1):
+    // Sequential Bubble Sort
+    void sequentialBubbleSort(int arr[], int n){
 
-            for j in range(n - i - 1):
+        for(int i=0;i<n-1;i++){
 
-                if arr[j] > arr[j + 1]:
+            for(int j=0;j<n-i-1;j++){
 
-                    # Swap elements
-                    arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                if(arr[j] > arr[j+1]){
 
-    # Parallel Bubble Sort
-    def parallel_bubble_sort(self, arr):
+                    int temp = arr[j];
+                    arr[j] = arr[j+1];
+                    arr[j+1] = temp;
+                }
+            }
+        }
+    }
 
-        n = len(arr)
+    // Parallel Bubble Sort
+    void parallelBubbleSort(int arr[], int n){
 
-        # Compare and Swap Function
-        def compare_swap(j):
+        for(int i=0;i<n;i++){
 
-            if arr[j] > arr[j + 1]:
+            // Even Phase
+            #pragma omp parallel for
+            for(int j=0;j<n-1;j+=2){
 
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                if(arr[j] > arr[j+1]){
 
-        for i in range(n):
+                    int temp = arr[j];
+                    arr[j] = arr[j+1];
+                    arr[j+1] = temp;
+                }
+            }
 
-            # Even Phase
-            with ThreadPoolExecutor() as executor:
+            // Odd Phase
+            #pragma omp parallel for
+            for(int j=1;j<n-1;j+=2){
 
-                executor.map(compare_swap, range(0, n - 1, 2))
+                if(arr[j] > arr[j+1]){
 
-            # Odd Phase
-            with ThreadPoolExecutor() as executor:
+                    int temp = arr[j];
+                    arr[j] = arr[j+1];
+                    arr[j+1] = temp;
+                }
+            }
+        }
+    }
 
-                executor.map(compare_swap, range(1, n - 1, 2))
+    // Print Array
+    void printArray(int arr[], int n){
 
-    # Print Array
-    def print_array(self, arr):
+        for(int i=0;i<n;i++)
+            cout<<arr[i]<<" ";
 
-        for i in arr:
-            print(i, end=" ")
+        cout<<endl;
+    }
+};
 
-        print()
+int main(){
 
+    int n;
 
-# Main Program
-n = int(input("Enter number of elements: "))
+    cout<<"Enter number of elements: ";
+    cin>>n;
 
-arr = list(map(int, input("Enter elements:\n").split()))
+    int arr[n], arr2[n];
 
-# Copy for parallel sorting
-arr2 = arr.copy()
+    cout<<"Enter elements:\n";
 
-# Create Object
-obj = BubbleSort()
+    for(int i=0;i<n;i++){
 
-# Sequential Sorting
-start = time.time()
+        cin>>arr[i];
 
-obj.sequential_bubble_sort(arr)
+        arr2[i] = arr[i];
+    }
 
-end = time.time()
+    BubbleSort obj;
 
-print("\nSequential Sorted Array:")
+    double start, end;
 
-obj.print_array(arr)
+    // Sequential Bubble Sort
+    start = omp_get_wtime();
 
-print(f"Sequential Time: {end - start:.10f} seconds")
+    obj.sequentialBubbleSort(arr,n);
 
-# Parallel Sorting
-start = time.time()
+    end = omp_get_wtime();
 
-obj.parallel_bubble_sort(arr2)
+    cout<<"\nSequential Sorted Array:\n";
 
-end = time.time()
+    obj.printArray(arr,n);
 
-print("\nParallel Sorted Array:")
+    cout<<fixed<<setprecision(10);
 
-obj.print_array(arr2)
+    cout<<"Sequential Time: "
+        <<end-start
+        <<" seconds\n";
 
-print("Parallel Time:", end - start, "seconds")
+    // Parallel Bubble Sort
+    start = omp_get_wtime();
+
+    obj.parallelBubbleSort(arr2,n);
+
+    end = omp_get_wtime();
+
+    cout<<"\nParallel Sorted Array:\n";
+
+    obj.printArray(arr2,n);
+
+    cout<<"Parallel Time: "
+        <<end-start
+        <<" seconds\n";
+
+    return 0;
+}
