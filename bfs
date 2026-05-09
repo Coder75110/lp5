@@ -1,0 +1,62 @@
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
+import threading
+
+class Graph:
+    def __init__(self, V):
+        self.V = V
+        self.adj = [[] for _ in range(V)]
+
+    # Add edge in undirected graph
+    def add_edge(self, u, v):
+        self.adj[u].append(v)
+        self.adj[v].append(u)
+
+    # Parallel BFS Traversal
+    def parallel_bfs(self, start):
+        visited = [False] * self.V
+        q = deque()
+
+        visited[start] = True
+        q.append(start)
+
+        lock = threading.Lock()
+
+        print("Parallel BFS Traversal:", end=" ")
+
+        while q:
+            node = q.popleft()
+            print(node, end=" ")
+
+            # Function for processing neighbors
+            def process_neighbor(neighbor):
+                nonlocal visited, q
+
+                if not visited[neighbor]:
+                    with lock:
+                        if not visited[neighbor]:
+                            visited[neighbor] = True
+                            q.append(neighbor)
+
+            # Parallel execution using threads
+            with ThreadPoolExecutor() as executor:
+                executor.map(process_neighbor, self.adj[node])
+
+        print()
+
+
+# Main Program
+V = int(input("Enter number of vertices: "))
+
+g = Graph(V)
+
+E = int(input("Enter number of edges: "))
+
+print("Enter edges (u v):")
+for _ in range(E):
+    u, v = map(int, input().split())
+    g.add_edge(u, v)
+
+start = int(input("Enter starting vertex: "))
+
+g.parallel_bfs(start)
