@@ -1,136 +1,143 @@
-import time
-from concurrent.futures import ThreadPoolExecutor
+#include<iostream>
+#include<omp.h>
+#include<iomanip>
+using namespace std;
 
-class MergeSort:
+class MergeSort{
 
-    # Merge Function
-    def merge(self, arr, l, m, r):
+public:
 
-        # Sizes of two subarrays
-        n1 = m - l + 1
-        n2 = r - m
+    // Merge Function
+    void merge(int arr[], int l, int m, int r){
 
-        # Temporary arrays
-        L = [0] * n1
-        R = [0] * n2
+        int n1 = m - l + 1;
+        int n2 = r - m;
 
-        # Copy data to temporary arrays
-        for i in range(n1):
-            L[i] = arr[l + i]
+        int L[n1], R[n2];
 
-        for j in range(n2):
-            R[j] = arr[m + 1 + j]
+        for(int i=0;i<n1;i++)
+            L[i] = arr[l+i];
 
-        i = 0
-        j = 0
-        k = l
+        for(int j=0;j<n2;j++)
+            R[j] = arr[m+1+j];
 
-        # Merge temporary arrays
-        while i < n1 and j < n2:
+        int i=0, j=0, k=l;
 
-            if L[i] <= R[j]:
-                arr[k] = L[i]
-                i += 1
+        while(i<n1 && j<n2){
 
-            else:
-                arr[k] = R[j]
-                j += 1
+            if(L[i] <= R[j])
+                arr[k++] = L[i++];
 
-            k += 1
+            else
+                arr[k++] = R[j++];
+        }
 
-        # Copy remaining elements of L
-        while i < n1:
-            arr[k] = L[i]
-            i += 1
-            k += 1
+        while(i<n1)
+            arr[k++] = L[i++];
 
-        # Copy remaining elements of R
-        while j < n2:
-            arr[k] = R[j]
-            j += 1
-            k += 1
+        while(j<n2)
+            arr[k++] = R[j++];
+    }
 
-    # Sequential Merge Sort
-    def sequential_merge_sort(self, arr, l, r):
+    // Sequential Merge Sort
+    void sequentialMergeSort(int arr[], int l, int r){
 
-        if l < r:
+        if(l < r){
 
-            m = (l + r) // 2
+            int m = (l+r)/2;
 
-            self.sequential_merge_sort(arr, l, m)
+            sequentialMergeSort(arr,l,m);
 
-            self.sequential_merge_sort(arr, m + 1, r)
+            sequentialMergeSort(arr,m+1,r);
 
-            self.merge(arr, l, m, r)
+            merge(arr,l,m,r);
+        }
+    }
 
-    # Parallel Merge Sort
-    def parallel_merge_sort(self, arr, l, r):
+    // Parallel Merge Sort
+    void parallelMergeSort(int arr[], int l, int r){
 
-        if l < r:
-            m = (l + r) // 2
-            # Parallel execution
-            with ThreadPoolExecutor(max_workers=2) as executor:
-                future1 = executor.submit(
-                    self.parallel_merge_sort,
-                    arr,
-                    l,
-                    m
-                )
+        if(l < r){
 
-                future2 = executor.submit(
-                    self.parallel_merge_sort,
-                    arr,
-                    m + 1,
-                    r
-                )
+            int m = (l+r)/2;
 
-                future1.result()
-                future2.result()
+            #pragma omp parallel sections
+            {
 
-            self.merge(arr, l, m, r)
+                #pragma omp section
+                parallelMergeSort(arr,l,m);
 
-    # Print Array
-    def print_array(self, arr):
+                #pragma omp section
+                parallelMergeSort(arr,m+1,r);
+            }
 
-        for i in arr:
-            print(i, end=" ")
+            merge(arr,l,m,r);
+        }
+    }
 
-        print()
+    // Print Array
+    void printArray(int arr[], int n){
 
+        for(int i=0;i<n;i++)
+            cout<<arr[i]<<" ";
 
-# Main Program
-n = int(input("Enter number of elements: "))
+        cout<<endl;
+    }
+};
 
-arr = list(map(int, input("Enter elements:\n").split()))
+int main(){
 
-# Copy array for parallel sort
-arr2 = arr.copy()
+    int n;
 
-# Create object
-obj = MergeSort()
+    cout<<"Enter number of elements: ";
+    cin>>n;
 
-# Sequential Merge Sort
-start = time.time()
+    int arr[n], arr2[n];
 
-obj.sequential_merge_sort(arr, 0, n - 1)
+    cout<<"Enter elements:\n";
 
-end = time.time()
+    for(int i=0;i<n;i++){
 
-print("\nSequential Sorted Array:")
+        cin>>arr[i];
 
-obj.print_array(arr)
+        arr2[i] = arr[i];
+    }
 
-print(f"Sequential Time: {end - start:.10f} seconds")
+    MergeSort obj;
 
-# Parallel Merge Sort
-start = time.time()
+    double start, end;
 
-obj.parallel_merge_sort(arr2, 0, n - 1)
+    // Sequential Merge Sort
+    start = omp_get_wtime();
 
-end = time.time()
+    obj.sequentialMergeSort(arr,0,n-1);
 
-print("\nParallel Sorted Array:")
+    end = omp_get_wtime();
 
-obj.print_array(arr2)
+    cout<<"\nSequential Sorted Array:\n";
 
-print(f"Parallel Time: {end - start:.10f} seconds")
+    obj.printArray(arr,n);
+
+    cout<<fixed<<setprecision(10);
+
+    cout<<"Sequential Time: "
+        <<end-start
+        <<" seconds\n";
+
+    // Parallel Merge Sort
+    start = omp_get_wtime();
+
+    obj.parallelMergeSort(arr2,0,n-1);
+
+    end = omp_get_wtime();
+
+    cout<<"\nParallel Sorted Array:\n";
+
+    obj.printArray(arr2,n);
+
+    cout<<"Parallel Time: "
+        <<end-start
+        <<" seconds\n";
+
+    return 0;
+}
