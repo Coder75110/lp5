@@ -1,0 +1,87 @@
+import time
+from concurrent.futures import ThreadPoolExecutor
+class BubbleSort:
+
+    # Sequential Bubble Sort
+    def sequential_bubble_sort(self, arr):
+
+        n = len(arr)
+
+        for i in range(n - 1):
+
+            for j in range(n - i - 1):
+
+                if arr[j] > arr[j + 1]:
+
+                    # Swap elements
+                    arr[j], arr[j + 1] = arr[j + 1], arr[j]
+
+    # Parallel Bubble Sort
+    def parallel_bubble_sort(self, arr):
+
+        n = len(arr)
+
+        # Compare and Swap Function
+        def compare_swap(j):
+
+            if arr[j] > arr[j + 1]:
+
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+
+        for i in range(n):
+
+            # Even Phase
+            with ThreadPoolExecutor() as executor:
+
+                executor.map(compare_swap, range(0, n - 1, 2))
+
+            # Odd Phase
+            with ThreadPoolExecutor() as executor:
+
+                executor.map(compare_swap, range(1, n - 1, 2))
+
+    # Print Array
+    def print_array(self, arr):
+
+        for i in arr:
+            print(i, end=" ")
+
+        print()
+
+
+# Main Program
+n = int(input("Enter number of elements: "))
+
+arr = list(map(int, input("Enter elements:\n").split()))
+
+# Copy for parallel sorting
+arr2 = arr.copy()
+
+# Create Object
+obj = BubbleSort()
+
+# Sequential Sorting
+start = time.time()
+
+obj.sequential_bubble_sort(arr)
+
+end = time.time()
+
+print("\nSequential Sorted Array:")
+
+obj.print_array(arr)
+
+print(f"Sequential Time: {end - start:.10f} seconds")
+
+# Parallel Sorting
+start = time.time()
+
+obj.parallel_bubble_sort(arr2)
+
+end = time.time()
+
+print("\nParallel Sorted Array:")
+
+obj.print_array(arr2)
+
+print("Parallel Time:", end - start, "seconds")
