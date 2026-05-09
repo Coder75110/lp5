@@ -1,0 +1,63 @@
+from concurrent.futures import ThreadPoolExecutor
+import threading
+
+
+class ParallelReduction:
+
+    def __init__(self, arr):
+        self.arr = arr
+        self.sum = 0
+        self.minimum = arr[0]
+        self.maximum = arr[0]
+
+        # Lock for synchronization
+        self.lock = threading.Lock()
+
+    # Process one element
+    def process_element(self, value):
+
+        with self.lock:
+
+            # Sum
+            self.sum += value
+
+            # Minimum
+            if value < self.minimum:
+                self.minimum = value
+
+            # Maximum
+            if value > self.maximum:
+                self.maximum = value
+
+    # Parallel Reduction Function
+    def parallel_reduction(self):
+
+        with ThreadPoolExecutor() as executor:
+
+            executor.map(self.process_element, self.arr)
+
+        # Average
+        average = self.sum / len(self.arr)
+
+        # Print Results
+        print("\nResults using Parallel Reduction:")
+
+        print("Sum =", self.sum)
+
+        print("Minimum =", self.minimum)
+
+        print("Maximum =", self.maximum)
+
+        print("Average =", average)
+
+
+# Main Program
+n = int(input("Enter number of elements: "))
+
+arr = list(map(int, input("Enter elements:\n").split()))
+
+# Create Object
+obj = ParallelReduction(arr)
+
+# Call Parallel Reduction
+obj.parallel_reduction()
