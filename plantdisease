@@ -1,0 +1,220 @@
+import os
+import tensorflow as tf
+import seaborn as sns
+from tensorflow.keras import layers
+from tensorflow.keras import mixed_precision
+
+mixed_precision.set_global_policy("float32")
+
+from tensorflow.keras.preprocessing import image_dataset_from_directory
+
+from tensorflow.keras.layers import Dense, Activation, Dropout, Conv2D, MaxPooling2D, BatchNormalization, Flatten
+
+from tensorflow.keras import regularizers
+
+from tensorflow.keras.models import Model, load_model, Sequential
+
+from sklearn.metrics import confusion_matrix, classification_report
+import itertools
+import matplotlib.pyplot as plt
+import datetime
+import matplotlib.image as mpimg
+from tqdm.notebook import tqdm
+
+import numpy as np
+import pandas as pd
+
+# Dataset Paths
+train_dir = r"C:\Users\lenovo\OneDrive\Desktop\HPC_GUI_Project\New Plant Diseases Dataset(Augmented)\New Plant Diseases Dataset(Augmented)\train"
+
+val_dir = r"C:\Users\lenovo\OneDrive\Desktop\HPC_GUI_Project\New Plant Diseases Dataset(Augmented)\New Plant Diseases Dataset(Augmented)\valid"
+
+# Load Dataset
+train_data = image_dataset_from_directory(
+    train_dir,
+    batch_size=8,
+    image_size=(224,224),
+    label_mode='categorical',
+    shuffle=True,
+    seed=42
+)
+
+val_data = image_dataset_from_directory(
+    val_dir,
+    batch_size=8,
+    image_size=(224,224),
+    label_mode='categorical',
+    shuffle=False,
+    seed=42
+)
+
+# Class Names
+class_names = train_data.class_names
+
+class_count = len(class_names)
+
+print("Number of Classes:", class_count)
+
+# Display Sample Images
+samples = []
+
+x = 0
+
+for i in tqdm(train_data.unbatch()):
+
+    if(x == 10):
+        break
+
+    samples.append([i[0], i[1]])
+
+    x += 1
+
+images = []
+labels = []
+
+for i in samples:
+
+    images.append(i[0])
+
+    labels.append(class_names[tf.argmax(i[1])])
+
+print(len(images), len(labels))
+
+# Plot Images
+fig = plt.figure(figsize=(20,8))
+
+rows = 2
+cols = 5
+
+x = 1
+
+for image, label in zip(images, labels):
+
+    fig.add_subplot(rows, cols, x)
+
+    plt.imshow(image/255.)
+
+    plt.axis("off")
+
+    plt.title(label)
+
+    x += 1
+
+plt.show()
+
+# Input Shape
+input_shape = (224,224,3)
+
+# Early Stopper Function
+def create_early_stopper():
+
+    earlystopper = tf.keras.callbacks.EarlyStopping(
+        monitor="val_accuracy",
+        patience=3,
+        restore_best_weights=True,
+        min_delta=0.001,
+        verbose=1
+    )
+
+    return earlystopper
+
+# Load EfficientNetB4 Model
+model_name = 'EfficientNetB4'
+
+base_model = tf.keras.applications.EfficientNetB4(
+    include_top=False,
+    weights="imagenet",
+    input_shape=(224,224,3),
+    pooling='max'
+)
+
+# Build Model
+x = base_model.output
+
+x = tf.keras.layers.BatchNormalization(
+    axis=-1,
+    momentum=0.99,
+    epsilon=0.002
+)(x)
+
+x = Dense(128, activation='relu')(x)
+
+x = Dropout(rate=0.45, seed=42)(x)
+
+output = Dense(class_count, activation='softmax')(x)
+
+model = Model(inputs=base_model.input, outputs=output)
+
+# Compile Model
+model.compile(
+    tf.keras.optimizers.Adam(learning_rate=0.00001),
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+# Early Stopping
+early_stopper = tf.keras.callbacks.EarlyStopping(
+    patience=5,
+    min_delta=0.01,
+    verbose=1
+)
+
+# Train Model
+history = model.fit(
+    train_data,
+    epochs=60,
+    validation_data=val_data,
+    callbacks=[early_stopper]
+)
+
+# Evaluate Model
+loss, accuracy = model.evaluate(val_data)
+
+print("\nValidation Accuracy:", accuracy)
+
+# Predictions
+predictions = model.predict(val_data)
+
+predicted_classes = np.argmax(predictions, axis=1)
+
+true_classes = np.concatenate(
+    [np.argmax(y, axis=1) for x, y in val_data],
+    axis=0
+)
+
+# Classification Report
+print("\nClassification Report:\n")
+
+print(
+    classification_report(
+        true_classes,
+        predicted_classes,
+        target_names=class_names
+    )
+)
+
+# Confusion Matrix
+cm = confusion_matrix(true_classes, predicted_classes)
+
+# Plot Confusion Matrix
+plt.figure(figsize=(20,20))
+
+sns.heatmap(
+    cm,
+    annot=True,
+    fmt='d',
+    cmap='Blues',
+    xticklabels=class_names,
+    yticklabels=class_names
+)
+
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.title("Confusion Matrix")
+
+plt.show()
+
+# Save Model
+model.save("plant_disease_model.h5")
+
+print("\nModel Saved Successfully")
