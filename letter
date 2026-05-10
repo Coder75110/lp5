@@ -1,0 +1,62 @@
+import pandas as pd
+import numpy as np
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import accuracy_score, classification_report
+
+# Load Dataset
+df = pd.read_csv('letter-recognition.csv')
+
+print('Dataset Shape:', df.shape)
+
+print(df.head())
+
+# Split Features and Target
+y = df.iloc[:,0]      # Letter label
+X = df.iloc[:,1:]     # Numeric features
+
+# Ensure numeric
+X = X.apply(pd.to_numeric)
+
+# Train Test Split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42
+)
+
+# Feature Scaling
+scaler = StandardScaler()
+
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Build Deep Neural Network
+model = MLPClassifier(
+    hidden_layer_sizes=(128,64),
+    activation='relu',
+    solver='adam',
+    max_iter=300,
+    random_state=42
+)
+
+# Train Model
+model.fit(X_train, y_train)
+
+# Predictions
+predictions = model.predict(X_test)
+
+print('Predicted:', predictions[:10])
+
+print('Actual:', y_test.values[:10])
+
+# Evaluation
+accuracy = accuracy_score(y_test, predictions)
+
+print('Accuracy:', accuracy)
+
+print('\nClassification Report:\n')
+
+print(classification_report(y_test, predictions))
